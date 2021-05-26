@@ -1,0 +1,26 @@
+{
+    "presets": [
+        ["@babel/preset-env", {
+            "targets": {
+                "node": "current"
+            }
+        }],
+        "@babel/preset-react"
+    ],
+    "plugins": [
+        ["module-resolver", {
+            "alias": {
+                "-": "./app"
+            }
+        }],
+        "lodash",
+		"react-require",
+		"transform-class-properties",
+        "@babel/plugin-proposal-class-properties",
+        ["styled-components", {
+            "ssr": true,
+            "displayName": true,
+            "preprocess": false
+        }]
+    ]
+}
