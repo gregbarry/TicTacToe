@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "bootstrap": "^5.0.1",
+    "canvas-confetti": "^1.4.0",
     "formik": "^2.2.8",
     "lodash": "^4.17.21",
     "react": "^17.0.2",

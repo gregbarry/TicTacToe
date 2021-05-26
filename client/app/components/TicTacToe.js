@@ -1,4 +1,5 @@
 import {get, sample} from 'lodash';
+import confetti from 'canvas-confetti';
 import React, {Component} from 'react';
 import styled from 'styled-components';
 import Col from 'react-bootstrap/Col';
@@ -140,6 +141,14 @@ export default class TicTacToe extends Component {
         const {grid = [], message = '', winner, winningIndex} = this.state;
         const gameOver = winner !== null;
         const strikeStyle = getStrikethroughStyles(winningIndex);
+
+        if (winner === 1) {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
 
         return (
             <>
