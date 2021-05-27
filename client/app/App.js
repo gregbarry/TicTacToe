@@ -1,105 +1,134 @@
 import 'react-toastify/dist/ReactToastify.css';
 
-import {get} from 'lodash';
+import {capitalize, get, isEmpty} from 'lodash';
 import React, {Component} from 'react';
 import styled from 'styled-components';
 import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
-import socketClient from 'socket.io-client';
 
 import TicTacToe from '-/components/TicTacToe';
+import LoginForm from '-/components/LoginForm';
+import {getCurrentUser, logout} from '-/utils/auth';
 
 const StyledRoot = styled.div``;
-
-let socket;
 
 class App extends Component{
     constructor(props) {
         super(props);
 
+        const currentUser = getCurrentUser();
+        const {user} = currentUser;
+
         this.state = {
-            data: undefined,
-            initialStep: true,
-            gameType: undefined
+            formType: 'login',
+            gameType: undefined,
+            loggedIn: !isEmpty(user),
+            user
         };
     }
 
-    componentWillUnmount() {
-        const {gameType} = this.state;
-
-        if (gameType === 'multi') {
-            socket.disconnect();
-        }
-    }
-
-    handleSelectGameType = e => {
-        const gameType = get(e, 'target.dataset.gametype');
-
-        if (gameType === 'multi') {
-            socket = socketClient();
-
-            socket.on('FromAPI', data => {
-                this.setState({
-                    data
-                });
-            });
-        }
+    toggleFormType = e => {
+        e.preventDefault();
+        const {formType} = this.state;
 
         this.setState({
-            gameType,
-            initialStep: false
+            formType: formType === 'login' ? 'signup' : 'login'
         });
     };
 
+    handleLogout = e => {
+        e.preventDefault();
+        logout();
+    };
+
+    handleSelectGameType = e => {
+        const gameType = get(e, 'target.dataset.gametype');
+        this.setState({gameType});
+    };
+
     handleStartOver = () => {
+        this.setState({gameType: undefined});
+    };
+
+    handleSetUserData = user => {
         this.setState({
-            initialStep: true
+            loggedIn: true,
+            user
         });
-    }
+    };
 
     render() {
-        console.log(this.state);
-        const {initialStep} = this.state;
+        const {formType, gameType, loggedIn, user = {}} = this.state;
+        const {email} = user;
+        const multiplayerReady = gameType === 'multiplayer' && loggedIn;
+        const showMultiplayerLogin = gameType === 'multiplayer' && !loggedIn;
+        const showBoard = gameType === 'computer' || multiplayerReady;
+        const formTypeLink = formType == 'signup' ? 'I already have an account' : 'I don\'t have a login';
 
         return (
             <Container className="text-center">
                 <StyledRoot className="mt-5">
                     <Row>
                         <Col>
-                            {initialStep ? (
+                            <h2>Tic Tac Toe</h2>
+                            {!gameType && (
                                 <>
-                                    <h2>Tic Tac Toe</h2>
                                     <p>
-                                        Hello!  Welcome to my Tic Tack Toe game.  Would you like
+                                        Hello! Welcome to my Tic Tack Toe game. Would you like
                                         to play against another player, or against this program?
                                     </p>
-                                    <Button
-                                        className="mr-3"
-                                        data-gametype="multi"
-                                        size="lg"
-                                        onClick={this.handleSelectGameType}>
-                                        Person
-                                    </Button>
-                                    <Button
-                                        data-gametype="single"
-                                        size="lg"
-                                        onClick={this.handleSelectGameType}>
-                                        Computer
-                                    </Button>
+                                    {['multiplayer', 'computer'].map(type => {
+                                        return (
+                                            <Button
+                                                key={type}
+                                                className="mr-3"
+                                                data-gametype={type}
+                                                size="lg"
+                                                onClick={this.handleSelectGameType}>
+                                                Play {capitalize(type)}
+                                            </Button>
+                                        );
+                                    })}
                                 </>
-                            ) : (
+                            )}
+                            {(showMultiplayerLogin && !loggedIn) && (
                                 <>
-                                    <TicTacToe />
+                                    <p>
+                                        Good Choice! Please Login or Signup to join
+                                        the player queue.
+                                    </p>
+                                    <p><i>
+                                        <a
+                                            href="#"
+                                            onClick={this.toggleFormType}>
+                                            &nbsp;{formTypeLink}
+                                        </a>
+                                    </i></p>
+                                    <LoginForm
+                                        onSetUserData={this.handleSetUserData}
+                                        formType={formType} />
+                                </>
+                            )}
+                            {showBoard && (
+                                <>
+                                    <TicTacToe gameType={gameType} />
                                     <Button
                                         className="mt-4"
-                                        data-gametype="single"
                                         size="lg"
                                         onClick={this.handleStartOver}>
                                         Start Over
                                     </Button>
                                 </>
+                            )}
+                            {loggedIn && (
+                                <div className="my-5">
+                                    <p>
+                                        Logged in as {email}
+                                        &nbsp;(<a href="#" onClick={this.handleLogout}>Logout</a>)
+                                    </p>
+                                </div>
                             )}
                         </Col>
                     </Row>

@@ -2,8 +2,7 @@ import {get, sample} from 'lodash';
 import confetti from 'canvas-confetti';
 import React, {Component} from 'react';
 import styled from 'styled-components';
-import Col from 'react-bootstrap/Col';
-import Row from 'react-bootstrap/Row';
+import socketClient from 'socket.io-client';
 
 import {
     DIMENSIONS,
@@ -16,16 +15,22 @@ import {checkForWinner, fillBoard, getEmptySquares, getStrikethroughStyles, slee
 
 const Strikethrough = styled.div`
     position: absolute;
-    ${({styles}) => styles}
+    ${({styles}) => {
+        return styles;
+    }}
     background-color: red;
     height: 5px;
-    width: ${({styles}) => !styles && 0};
+    width: ${({styles}) => {
+        return !styles && 0;
+    }};
 `;
 
 const StyledGrid = styled.div`
     display: flex;
     justify-content: center;
-    width: ${({dimensions}) => `${dimensions * (SQUARE_DIMENSIONS + 5)}px`};
+    width: ${({dimensions}) => {
+        return `${dimensions * (SQUARE_DIMENSIONS + 5)}px`;
+    }};
     flex-flow: wrap;
     position: relative;
 `;
@@ -51,6 +56,8 @@ export default class TicTacToe extends Component {
     constructor(props) {
         super(props);
 
+        const {gameType} = props;
+
         this.state = {
             grid: fillBoard(),
             message: 'Your Turn',
@@ -58,10 +65,36 @@ export default class TicTacToe extends Component {
                 computer: PLAYER_O,
                 human: PLAYER_X
             },
+            ...gameType === 'multiplayer' && {
+                room: undefined
+            },
             turn: 'player1',
             winner: null,
             winningIndex: null
         };
+    }
+
+    async componentDidMount() {
+        const {gameType} = this.props;
+
+        if (gameType === 'multiplayer') {
+            this.socket = socketClient();
+            this.socket.emit('newGame');
+            this.socket.on('newGameCreated', room => {
+                this.setState({
+                    serverConfirmed: true,
+                    room
+                });
+            });
+        }
+    }
+
+    componentWillUnmount() {
+        const {gameType} = this.state;
+
+        if (gameType === 'multiplayer') {
+            this.socket.disconnect();
+        }
     }
 
     move = (index, player, cb) => {
@@ -99,8 +132,6 @@ export default class TicTacToe extends Component {
             }
         }
 
-        console.log('winer', winner);
-
         this.setState({
             grid: gridClone,
             message,
@@ -109,14 +140,18 @@ export default class TicTacToe extends Component {
             ...!gameOver && {
                 turn: yourTurn ? 'player1' : 'player2'
             }
-        }, () => cb && !gameOver ? cb() : null);
+        }, () => {
+            if (cb && !gameOver) {
+                cb();
+            }
+        });
     };
 
     handleComputerMove = async() => {
         const {grid = [], players = {}} = this.state;
         const {computer} = players;
         const emptySquares = getEmptySquares(grid);
-        // TODO: Further investiage minimax to make computer picks smarter
+        // TODO: Investiage minimax to make computer picks smarter
         const computerPick = sample(emptySquares);
 
         // Add a slight pause before computer plays so it's less jarring
@@ -146,7 +181,7 @@ export default class TicTacToe extends Component {
             confetti({
                 particleCount: 100,
                 spread: 70,
-                origin: { y: 0.6 }
+                origin: {y: 0.6}
             });
         }
 

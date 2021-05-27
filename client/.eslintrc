@@ -20,6 +20,7 @@
         "react"
     ],
     "rules": {
+        "@babel/semi": "error",
         "quotes": [2, "single", {"avoidEscape": true}],
         "no-case-declarations": 1,
         "no-class-assign": 0,
@@ -58,6 +59,7 @@
         "space-before-function-paren": ["error", "never"],
         "indent": ["error", 4, {"SwitchCase": 1}],
         "object-curly-spacing": ["warn", "never"],
-        "comma-spacing": "warn"
+        "comma-spacing": "warn",
+        "arrow-parens": ["warn", "as-needed"]
     }
 }
