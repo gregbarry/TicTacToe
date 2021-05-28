@@ -13,8 +13,8 @@ import url from 'url';
 // This needs to stay here to ensure config is imported first
 /* eslint no-unused-vars: "off" */
 import {config} from './config';
-import graphqlSchema from '-/graphql/schema';
-import {checkForWinner, getEmptySquares, sleep, updatePlayers} from '-/utils';
+import graphqlSchema from './graphql/schema';
+import {checkForWinner, getEmptySquares, sleep, updatePlayers} from './utils';
 
 logger.addTarget('console').withFormatter(palin);
 logger.info('NestGenesis init');
