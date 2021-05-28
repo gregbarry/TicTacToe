@@ -13,10 +13,10 @@ jobs:
     steps:
       - checkout
       - run: cd client
-      - run: npm install
-      - run: npm run-script build
+      - run: cd client && npm install
+      - run: cd client && npm run-script build
       - run: mkdir -p $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME
-      - run: cp -R ./dist/* $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
+      - run: cp -R ./client/dist/* $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
       - run: cd $CIRCLE_ARTIFACTS && zip -r ./$CIRCLE_PROJECT_REPONAME.zip $CIRCLE_PROJECT_REPONAME/
       - run: scp -o StrictHostKeyChecking=no $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME.zip ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com:/var/www/html/
       - run: ssh ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com -f 'cd /var/www/html/ && unzip -o TicTacToe.zip && rm TicTacToe.zip'
