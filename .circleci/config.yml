@@ -22,6 +22,7 @@ jobs:
   build-server:
     <<: *defaults
     steps:
+      - checkout
       - run: mkdir -p $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME
       - run: cp -R ./server $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
       - run: cd $CIRCLE_ARTIFACTS && zip -r ./$CIRCLE_PROJECT_REPONAME.zip $CIRCLE_PROJECT_REPONAME/
