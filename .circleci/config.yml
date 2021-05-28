@@ -24,7 +24,7 @@ jobs:
     steps:
       - checkout
       - run: mkdir -p $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME
-      - run: cp -R ./server $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
+      - run: cp -R ./server/* $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
       - run: cd $CIRCLE_ARTIFACTS && zip -r ./$CIRCLE_PROJECT_REPONAME.zip $CIRCLE_PROJECT_REPONAME/
       - run: scp -o StrictHostKeyChecking=no $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME.zip ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com:/var/www/
       - run: ssh -t -o StrictHostKeyChecking=no ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com 'bash -i -c "cd /var/www/ && unzip -o TicTacToe.zip && cd /var/www/TicTacToe && npm install && ./node_modules/.bin/babel -d ./ ./app --copy-files && pm2 stop server.js && pm2 kill && export NODE_ENV=production && NODE_ENV=production pm2 start server.js --name tictactoe-server --update-env && exit"'
