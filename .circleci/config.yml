@@ -12,7 +12,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: cd client
       - run: cd client && npm install
       - run: cd client && npm run-script build
       - run: mkdir -p $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME
