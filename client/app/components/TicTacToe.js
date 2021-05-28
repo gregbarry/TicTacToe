@@ -82,7 +82,7 @@ export default class TicTacToe extends Component {
     getCurrentPlayer = () => {
         const {players = []} = this.state;
         const email = get(this, 'props.user.email');
-        const player = players.find(player => player.name === email);
+        const player = players.find(player => player.name === email) || {};
 
         return player;
     };
@@ -97,9 +97,9 @@ export default class TicTacToe extends Component {
     getMessage = (roomObj = {}) => {
         const {players = [], winner} = roomObj;
         const email = get(this, 'props.user.email');
-        const player = players.find(player => player.name === email);
+        const player = players.find(player => player.name === email) || {};
         const {active, piece} = player;
-        const otherPlayer = players.find(player => player.name !== email);
+        const otherPlayer = players.find(player => player.name !== email) || {};
         const {name, piece: otherPlayerPiece} = otherPlayer;
         let message;
 
@@ -127,21 +127,21 @@ export default class TicTacToe extends Component {
     async componentDidMount() {
         const {gameType, user} = this.props;
         const {email} = user;
+
         this.socket = socketClient();
-
-        // Try and join if game is not single player
-
-        this.socket.emit('newGame', {gameType, email});
-        this.socket.on('newGameCreated', roomObj => {
+        this.socket.emit('startGame', {gameType, email});
+        this.socket.on('joiningRoom', roomObj => {
             const {grid, players, roomId} = roomObj;
             const message = this.getMessage(roomObj);
+            const tableFull = players.length === 2;
 
             this.setState({
                 connected: true,
                 grid,
                 message,
                 players,
-                roomId
+                roomId,
+                waiting: !tableFull
             });
         });
 
