@@ -1,0 +1,31 @@
+version: 2.1
+defaults: &defaults
+  working_directory: ~/gregbarry/TicTacToe
+  parallelism: 1
+  shell: /bin/bash --login
+  environment:
+    CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+  docker:
+    - image: circleci/node:10.16.3
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: cd client
+      - run: npm install
+      - run: npm run-script build
+      - run: mkdir -p $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME
+      - run: cp -R ./dist/* $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME/
+      - run: cd $CIRCLE_ARTIFACTS && zip -r ./$CIRCLE_PROJECT_REPONAME.zip $CIRCLE_PROJECT_REPONAME/
+      - run: scp -o StrictHostKeyChecking=no $CIRCLE_ARTIFACTS/$CIRCLE_PROJECT_REPONAME.zip ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com:/var/www/html/
+      - run: ssh ubuntu@ec2-54-204-197-229.compute-1.amazonaws.com -f 'cd /var/www/html/ && unzip -o TicTacToe.zip && rm TicTacToe.zip'
+workflows:
+  version: 2
+  build-and-publish:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - master

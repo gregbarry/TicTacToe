@@ -62,22 +62,16 @@ const createRoom = (gameInfo = {}) => {
     const {email, gameType} = gameInfo;
     let newRoom = nanoid();
 
-    // This is probably over kill. The chance of nanoid generating
-    // the same ID is infinitesimal
     while (rooms.has(newRoom)){
         newRoom = nanoid()();
     }
 
-    const players = [];
-
-    if (!players.length) {
-        players.push({
-            active: true,
-            type: 'human',
-            name: email,
-            piece: 'X'
-        });
-    }
+    const players = [{
+        active: true,
+        type: 'human',
+        name: email,
+        piece: 'X'
+    }];
 
     if (gameType === 'computer') {
         players.push({
@@ -133,6 +127,11 @@ const handleMove = (moveInfo = {}) => {
     gridClone[square] = piece;
 
     const gameResults = checkForWinner(gridClone);
+
+    if (gameResults) {
+        // TODO: Update database with win information
+    }
+
     const updatedPlayers = updatePlayers(players);
 
     rooms.set(roomId, {
@@ -152,13 +151,12 @@ io.on('connection', socket => {
         const {email, gameType} = gameInfo;
         const {size} = rooms;
         let needsTable = true;
-        let room;
 
         if (size && gameType === 'multiplayer') {
             for (const [roomId, roomObj] of rooms) {
-                const {players = [], ...theRest} = roomObj;
+                const {players = [], name: currentPlayer, ...theRest} = roomObj;
 
-                if (players.length === 1) {
+                if (players.length === 1 && email !== currentPlayer) {
                     rooms.set(roomId, {
                         ...theRest,
                         players: [...players, {
@@ -179,7 +177,7 @@ io.on('connection', socket => {
         }
 
         if (needsTable) {
-            room = createRoom(gameInfo);
+            const room = createRoom(gameInfo);
             logger.info(`Emitting 'joiningRoom' with room: ${room}`);
             socket.join(room);
             socket.emit('joiningRoom', rooms.get(room));
@@ -201,8 +199,9 @@ io.on('connection', socket => {
         }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', e => {
         logger.info('Client disconnected');
+        // TODO: emit event letting other player know opponent disconneted
     });
 });
 
