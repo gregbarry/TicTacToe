@@ -19,11 +19,11 @@ class App extends Component{
         super(props);
 
         const currentUser = getCurrentUser();
-        const {user} = currentUser;
+        const {user = {}} = currentUser;
 
         this.state = {
-            formType: 'login',
-            gameType: undefined,
+            formType: 'login', // Can be 'login' or 'signup'
+            gameType: undefined, // Can be 'multiplayer' or 'computer'
             loggedIn: !isEmpty(user),
             user
         };
@@ -62,10 +62,16 @@ class App extends Component{
     render() {
         const {formType, gameType, loggedIn, user = {}} = this.state;
         const {email} = user;
-        const multiplayerReady = gameType === 'multiplayer' && loggedIn;
-        const showMultiplayerLogin = gameType === 'multiplayer' && !loggedIn;
-        const showBoard = gameType === 'computer' || multiplayerReady;
         const formTypeLink = formType == 'signup' ? 'I already have an account' : 'I don\'t have a login';
+        let step;
+
+        if (!gameType && !loggedIn) {
+            step = 'login';
+        } else if (!gameType && loggedIn) {
+            step = 'selectGame';
+        } else if (loggedIn && gameType) {
+            step = 'goTime';
+        }
 
         return (
             <Container className="text-center">
@@ -73,11 +79,29 @@ class App extends Component{
                     <Row>
                         <Col>
                             <h2>Tic Tac Toe</h2>
-                            {!gameType && (
+                            {step === 'login' && (
                                 <>
                                     <p>
-                                        Hello! Welcome to my Tic Tack Toe game. Would you like
-                                        to play against another player, or against this program?
+                                        Hello! Welcome to my Tic Tack Toe game. Please
+                                        Login or Signup to play some Tic-Tac-Toe.
+                                    </p>
+                                    <p><i>
+                                        <a
+                                            href="#"
+                                            onClick={this.toggleFormType}>
+                                            &nbsp;{formTypeLink}
+                                        </a>
+                                    </i></p>
+                                    <LoginForm
+                                        onSetUserData={this.handleSetUserData}
+                                        formType={formType} />
+                                </>
+                            )}
+                            {step === 'selectGame' && (
+                                <>
+                                    <p>
+                                        Would you like to play against another player,
+                                        or against this program?
                                     </p>
                                     {['multiplayer', 'computer'].map(type => {
                                         return (
@@ -93,27 +117,11 @@ class App extends Component{
                                     })}
                                 </>
                             )}
-                            {(showMultiplayerLogin && !loggedIn) && (
+                            {step === 'goTime' && (
                                 <>
-                                    <p>
-                                        Good Choice! Please Login or Signup to join
-                                        the player queue.
-                                    </p>
-                                    <p><i>
-                                        <a
-                                            href="#"
-                                            onClick={this.toggleFormType}>
-                                            &nbsp;{formTypeLink}
-                                        </a>
-                                    </i></p>
-                                    <LoginForm
-                                        onSetUserData={this.handleSetUserData}
-                                        formType={formType} />
-                                </>
-                            )}
-                            {showBoard && (
-                                <>
-                                    <TicTacToe gameType={gameType} />
+                                    <TicTacToe
+                                        gameType={gameType}
+                                        user={user} />
                                     <Button
                                         className="mt-4"
                                         size="lg"

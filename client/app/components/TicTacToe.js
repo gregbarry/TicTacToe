@@ -1,36 +1,27 @@
-import {get, sample} from 'lodash';
+import {get} from 'lodash';
 import confetti from 'canvas-confetti';
 import React, {Component} from 'react';
 import styled from 'styled-components';
 import socketClient from 'socket.io-client';
+import Modal from 'react-bootstrap/Modal';
+import Loader from 'react-loader-spinner';
+import Carousel from 'react-bootstrap/Carousel';
 
-import {
-    DIMENSIONS,
-    DRAW,
-    PLAYER_X,
-    PLAYER_O,
-    SQUARE_DIMENSIONS
-} from '-/constants';
-import {checkForWinner, fillBoard, getEmptySquares, getStrikethroughStyles, sleep} from '-/utils';
+import {DIMENSIONS, DRAW, SQUARE_DIMENSIONS} from '-/constants';
+import {getStrikethroughStyles} from '-/utils';
 
 const Strikethrough = styled.div`
     position: absolute;
-    ${({styles}) => {
-        return styles;
-    }}
+    ${({styles}) => styles}
     background-color: red;
     height: 5px;
-    width: ${({styles}) => {
-        return !styles && 0;
-    }};
+    width: ${({styles}) => !styles && 0};
 `;
 
 const StyledGrid = styled.div`
     display: flex;
     justify-content: center;
-    width: ${({dimensions}) => {
-        return `${dimensions * (SQUARE_DIMENSIONS + 5)}px`;
-    }};
+    width: ${({dimensions}) => `${dimensions * (SQUARE_DIMENSIONS + 5)}px`};
     flex-flow: wrap;
     position: relative;
 `;
@@ -52,137 +43,158 @@ const StyledSquare = styled.div`
     }
 `;
 
+const Facts = () => {
+    const tips = [
+        'An early variation of tic-tac-toe was played in the Roman Empire, around the first century BC.',
+        'There are 255,168 possible tic-tac-toe move variations.',
+        'Historians believe the name at the time, tit-tat-toe, came from the sound of the pencil hitting the board.',
+        'The first print reference of tic-tac-toe appeared in Britain in 1864. It was called "Noughts and Crosses".'
+    ];
+
+    return (
+        <Carousel indicators={false} interval={10000} controls={false}>
+            {tips.map(tip => {
+                return (
+                    <Carousel.Item key={tip}>
+                        <p>{tip}</p>
+                    </Carousel.Item>
+                );
+            })}
+        </Carousel>
+    );
+};
 export default class TicTacToe extends Component {
     constructor(props) {
         super(props);
 
-        const {gameType} = props;
-
         this.state = {
-            grid: fillBoard(),
-            message: 'Your Turn',
-            players: {
-                computer: PLAYER_O,
-                human: PLAYER_X
-            },
-            ...gameType === 'multiplayer' && {
-                room: undefined
-            },
-            turn: 'player1',
+            connected: false,
+            grid: undefined,
+            message: undefined,
+            players: [],
+            roomId: undefined,
+            waiting: true,
             winner: null,
             winningIndex: null
         };
     }
 
-    async componentDidMount() {
-        const {gameType} = this.props;
+    getCurrentPlayer = () => {
+        const {players = []} = this.state;
+        const email = get(this, 'props.user.email');
+        const player = players.find(player => player.name === email);
 
-        if (gameType === 'multiplayer') {
-            this.socket = socketClient();
-            this.socket.emit('newGame');
-            this.socket.on('newGameCreated', room => {
-                this.setState({
-                    serverConfirmed: true,
-                    room
-                });
-            });
-        }
-    }
+        return player;
+    };
 
-    componentWillUnmount() {
-        const {gameType} = this.state;
+    isCurrentPlayerActive = () => {
+        const player = this.getCurrentPlayer();
+        const {active} = player;
 
-        if (gameType === 'multiplayer') {
-            this.socket.disconnect();
-        }
-    }
+        return active;
+    };
 
-    move = (index, player, cb) => {
-        const {grid = [], turn} = this.state;
-        const yourTurn = turn === 'player2';
-        const gridClone = [...grid];
-        gridClone[index] = player;
-        let winner = null;
-        let winningIndex = null;
+    getMessage = (roomObj = {}) => {
+        const {players = [], winner} = roomObj;
+        const email = get(this, 'props.user.email');
+        const player = players.find(player => player.name === email);
+        const {active, piece} = player;
+        const otherPlayer = players.find(player => player.name !== email);
+        const {name, piece: otherPlayerPiece} = otherPlayer;
         let message;
-
-        const winnerObj = checkForWinner(gridClone);
-
-        if (winnerObj) {
-            ({winner, winningIndex} = winnerObj);
-        }
-
-        const gameOver = winner !== null;
 
         switch(winner) {
             case DRAW: {
                 message = 'It was a draw';
                 break;
             }
-            case 1: {
+            case piece: {
                 message = 'You Won!';
                 break;
             }
-            case 2: {
-                message = 'The other player won :(';
+            case otherPlayerPiece: {
+                message = `${name} won :(`;
                 break;
             }
             default: {
-                message = yourTurn ? 'Your Turn' : 'Waiting on Other Player';
+                message = active ? 'Your Turn' : `Waiting on ${name}`;
             }
         }
 
-        this.setState({
-            grid: gridClone,
-            message,
-            winner,
-            winningIndex,
-            ...!gameOver && {
-                turn: yourTurn ? 'player1' : 'player2'
-            }
-        }, () => {
-            if (cb && !gameOver) {
-                cb();
-            }
+        return message;
+    };
+
+    async componentDidMount() {
+        const {gameType, user} = this.props;
+        const {email} = user;
+        this.socket = socketClient();
+
+        // Try and join if game is not single player
+
+        this.socket.emit('newGame', {gameType, email});
+        this.socket.on('newGameCreated', roomObj => {
+            const {grid, players, roomId} = roomObj;
+            const message = this.getMessage(roomObj);
+
+            this.setState({
+                connected: true,
+                grid,
+                message,
+                players,
+                roomId
+            });
         });
-    };
 
-    handleComputerMove = async() => {
-        const {grid = [], players = {}} = this.state;
-        const {computer} = players;
-        const emptySquares = getEmptySquares(grid);
-        // TODO: Investiage minimax to make computer picks smarter
-        const computerPick = sample(emptySquares);
+        this.socket.on('moveHandled', roomObj => {
+            const message = this.getMessage(roomObj);
 
-        // Add a slight pause before computer plays so it's less jarring
-        await sleep(1250);
+            this.setState({
+                ...roomObj,
+                message
+            });
+        });
+    }
 
-        if (!grid[computerPick]) {
-            this.move(computerPick, computer);
-        }
-    };
+    componentWillUnmount() {
+        this.socket.disconnect();
+    }
 
-    handleHumanMove = e => {
+    handleMove = e => {
+        const {user} = this.props;
+        const {email} = user;
         const index = get(e, 'target.dataset.square');
-        const {grid = [], players = {}, turn} = this.state;
-        const {human} = players;
+        const {grid = [], players = [], roomId} = this.state;
+        const player = players.find(player => player.name === email);
+        const {active} = player;
 
-        if (!grid[index] && turn === 'player1') {
-            this.move(index, human, this.handleComputerMove);
+        if (!grid[index] && active) {
+            this.socket.emit('move', {player, roomId, square: Number(index)});
         }
     };
 
     render() {
-        const {grid = [], message = '', winner, winningIndex} = this.state;
+        const {
+            connected,
+            grid = [],
+            message = '',
+            waiting,
+            winner,
+            winningIndex
+        } = this.state;
+
+        if (!connected) {
+            return null;
+        }
+
+        const {gameType} = this.props;
         const gameOver = winner !== null;
         const strikeStyle = getStrikethroughStyles(winningIndex);
+        const currentPlayer = this.getCurrentPlayer();
+        const {active, piece} = currentPlayer;
+        const canPlay = !gameOver && active;
 
-        if (winner === 1) {
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: {y: 0.6}
-            });
+        if (winner === piece) {
+            confetti({particleCount: 100, spread: 70, origin: {y: 0.6}});
         }
 
         return (
@@ -191,15 +203,14 @@ export default class TicTacToe extends Component {
                 <StyledGrid
                     className="mx-auto"
                     dimensions={DIMENSIONS}>
-                    {grid.map((value, i) => {
-                        const isActive = value !== null;
-                        const mark = value === PLAYER_X ? 'X' : 'O';
+                    {grid.map((mark, i) => {
+                        const isActive = mark !== null;
 
                         return (
                             <StyledSquare
-                                key={`${value}-${i}`}
+                                key={`${mark}-${i}`}
                                 data-square={i}
-                                onClick={!gameOver ? this.handleHumanMove : null}>
+                                onClick={canPlay ? this.handleMove : null}>
                                 {isActive && (
                                     <StyledMark>
                                         {mark}
@@ -210,6 +221,22 @@ export default class TicTacToe extends Component {
                     })}
                     <Strikethrough styles={strikeStyle} />
                 </StyledGrid>
+                <Modal
+                    className="text-center"
+                    onHide={() => {}}
+                    animation={false}
+                    size="lg"
+                    show={waiting && gameType === 'multiplayer'}>
+                    <Modal.Body>
+                        <h2>Waiting for Opponent</h2>
+                        <Loader
+                            className="text-center my-3"
+                            color="#007bff"
+                            type="Rings"
+                            height="250" />
+                        <Facts />
+                    </Modal.Body>
+                </Modal>
             </>
         );
     }
