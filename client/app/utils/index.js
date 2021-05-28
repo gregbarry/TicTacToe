@@ -1,41 +1,3 @@
-import {DIMENSIONS, DRAW, WINNING_COMBOS} from '-/constants';
-
-export const checkForWinner = grid => {
-    let res = null;
-
-    WINNING_COMBOS.forEach((el, i) => {
-        const firstEl = grid[el[0]];
-
-        if (firstEl && (firstEl === grid[el[1]] && firstEl === grid[el[2]])) {
-            res = {
-                winner: firstEl,
-                winningIndex: i
-            };
-        } else if (res === null && getEmptySquares(grid).length === 0) {
-            res = {
-                winner: DRAW,
-                winningIndex: null
-            };
-        }
-    });
-
-    return res;
-};
-
-export const fillBoard = () => {
-    return new Array(DIMENSIONS ** 2).fill(null);
-};
-
-export const getEmptySquares = (grid = []) => {
-    return grid.reduce((arr, value, i) => {
-        if (!value) {
-            arr.push(i);
-        }
-
-        return arr;
-    }, []);
-};
-
 export const getStrikethroughStyles = winningIndex => {
     const defaultWidth = 285;
     const diagonalWidth = 400;
@@ -92,10 +54,4 @@ export const getStrikethroughStyles = winningIndex => {
         default:
             return null;
     }
-};
-
-export const sleep = delay => {
-    return new Promise(res => {
-        return setTimeout(res, delay);
-    });
 };
