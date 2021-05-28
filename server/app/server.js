@@ -70,13 +70,17 @@ const createRoom = (gameInfo = {}) => {
 
     const players = [];
 
-    if (gameType === 'computer') {
+    if (!players.length) {
         players.push({
             active: true,
             type: 'human',
             name: email,
             piece: 'X'
-        }, {
+        });
+    }
+
+    if (gameType === 'computer') {
+        players.push({
             active: false,
             type: 'computer',
             name: 'Hal',
@@ -144,10 +148,42 @@ const handleMove = (moveInfo = {}) => {
 io.on('connection', socket => {
     logger.info('New client connected');
 
-    socket.on('newGame', gameInfo => {
-        const room = createRoom(gameInfo);
-        logger.info(`Emitting 'newGameCreated' with room: ${room}`);
-        socket.emit('newGameCreated', rooms.get(room));
+    socket.on('startGame', gameInfo => {
+        const {email, gameType} = gameInfo;
+        const {size} = rooms;
+        let needsTable = true;
+        let room;
+
+        if (size && gameType === 'multiplayer') {
+            for (const [roomId, roomObj] of rooms) {
+                const {players = [], ...theRest} = roomObj;
+
+                if (players.length === 1) {
+                    rooms.set(roomId, {
+                        ...theRest,
+                        players: [...players, {
+                            active: false,
+                            type: 'human',
+                            name: email,
+                            piece: 'O'
+                        }]
+                    });
+
+                    logger.info(`Emitting 'joiningRoom' with room: ${roomId}`);
+                    socket.join(roomId);
+                    io.to(roomId).emit('joiningRoom', rooms.get(roomId));
+                    needsTable = false;
+                    break;
+                }
+            }
+        }
+
+        if (needsTable) {
+            room = createRoom(gameInfo);
+            logger.info(`Emitting 'joiningRoom' with room: ${room}`);
+            socket.join(room);
+            socket.emit('joiningRoom', rooms.get(room));
+        }
     });
 
     socket.on('move', async moveInfo => {
@@ -156,7 +192,7 @@ io.on('connection', socket => {
         const room = rooms.get(roomId);
         const {gameType, winner} = room;
         const gameOver = !!winner;
-        socket.emit('moveHandled', room);
+        io.to(roomId).emit('moveHandled', room);
 
         if (gameType === 'computer' && !gameOver) {
             await handleComputerMove(roomId);
@@ -164,14 +200,6 @@ io.on('connection', socket => {
             socket.emit('moveHandled', updatedRoom);
         }
     });
-
-    /*
-    socket.on('joining', ({room}) => {
-        const foundRoom = rooms.has(room);
-        const joinMessage = foundRoom ? 'joinConfirmed' : 'errorMessage: Room not found';
-        logger.info(`Emitting: ${joinMessage}`);
-        socket.emit(joinMessage);
-    });*/
 
     socket.on('disconnect', () => {
         logger.info('Client disconnected');
