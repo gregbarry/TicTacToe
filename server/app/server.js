@@ -22,7 +22,7 @@ logger.info('NestGenesis init');
 const PORT = process.env.PORT || 4000;
 const env = process.env.NODE_ENV || 'development';
 const isDev = env === 'development';
-const allowedHosts = ['localhost'];
+const allowedHosts = ['localhost', 'http://tictactoe.nhousestudios.com'];
 
 const start = async() => {
     const app = express();
