@@ -12,17 +12,25 @@ the repository to your machine.  Once downloaded, you can follow these instructi
 ### Server
 1) `cd` into `server` and run `npm install`.
 2) start `server` by running `npm start`.
-3) You will need a few pieces of information in a `.env` in order for `server` to run properly.  Here are the required fields:
+3) You will need to create a file called `.env` that sits at the root of the 
+`server` project. Here are the fields you will need to add:
 
 ```
+# This can be any string which will act as a private key used for signing the JWT
 JWT_TOKEN_SECRET = ""
+# A Postgres user with access to your DB.
 PG_USER = ""
+# The Postgres host (usually localhost)
 PG_HOST = ""
+# The name of your DB
 PG_DATABASE = ""
+# The password associated with the PG_USER above
 PG_PASSWORD = ""
+# The open Postgres port (usually 5432)
 PG_PORT = ""
 ```
-4) You will also need to create a PostGres database containing two tables, `games` and `users`.  Here
+
+4) You will also need to create a Postgres database containing two tables, `games` and `users`.  Here
 are the schemas you can use to create the tables.
 
     **games**
@@ -58,7 +66,7 @@ are the schemas you can use to create the tables.
     ```
 
 #### Technologies Used
-Node, Apollo/GraphQL, NodeMon, Socket.io, Express, JWT, PostGres (pg), and Dotenv.
+Node, Apollo/GraphQL, NodeMon, Socket.io, Express, JWT, Postgres (pg), and Dotenv.
 
 ### Client
 1) `cd` into `client` and run `npm install`.
@@ -75,7 +83,7 @@ an EC2 Instance on an AWS account.  You can see the final project [here](http://
 ## Future Improvements
 There were a few other features I would have liked to add.
 
-1) A User Timer that gives the other user a win if a move isn't made within 30 seconds.
-2) MiniMax algorithm to let the computer make better moves.
+1) A User Timer that gives the opposing user a win if a move isn't made within 30 seconds.
+2) MiniMax algorithm to help Hal make better moves.
 3) Converting the project to TypeScript.
-4) Adding some tests using Mocha/Chai.
+4) Adding tests using Mocha/Chai.
