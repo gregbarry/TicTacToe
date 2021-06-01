@@ -2,7 +2,8 @@
 
 ## Overview
 This project was created in order to meet the goal of prodcuing a tic-tac-toe game that could be played against a human or 
-a computer.
+a computer.  If you select Multiplayer, you will wait in queue until another player starts a Multiplayer game as well.  If you
+select Computer, you will play against Hal.  Hal randomly picks his moves based on what squares are currently empty.
 
 ## Getting Started
 This repo is broken into two distinct projects, `server` and `client`.  To get started using this project, download 
