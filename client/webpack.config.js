@@ -40,6 +40,9 @@ module.exports = {
             test: /\.css$/,
             use: ['style-loader', 'css-loader']
         }, {
+            test: /\.(png|jpe?g|svg|gif)?$/,
+            use: 'file-loader'
+        }, {
             test: /\.js$/,
             enforce: 'pre',
             use: ['source-map-loader']

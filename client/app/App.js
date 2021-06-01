@@ -1,18 +1,26 @@
 import 'react-toastify/dist/ReactToastify.css';
 
+import {withApollo} from '@apollo/client/react/hoc';
 import {capitalize, get, isEmpty} from 'lodash';
 import React, {Component} from 'react';
 import styled from 'styled-components';
+import Accordion from 'react-bootstrap/Accordion';
 import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+import Table from 'react-bootstrap/Table';
 
 import TicTacToe from '-/components/TicTacToe';
 import LoginForm from '-/components/LoginForm';
 import {getCurrentUser, logout} from '-/utils/auth';
+import icon from '-/assets/tic-tac-toe.svg';
+import {getGameResults, getLeaderBoard} from '-/graphql/user';
 
-const StyledRoot = styled.div``;
+const StyledRoot = styled.div`
+    font-family: 'Heebo', sans-serif
+`;
 
 class App extends Component{
     constructor(props) {
@@ -23,10 +31,27 @@ class App extends Component{
 
         this.state = {
             formType: 'login', // Can be 'login' or 'signup'
+            gameHistory: [],
             gameType: undefined, // Can be 'multiplayer' or 'computer'
+            leaderBoard: [],
             loggedIn: !isEmpty(user),
             user
         };
+    }
+
+    async componentDidMount() {
+        const {client} = this.props;
+        const leaderRes = await client.query({query: getLeaderBoard});
+        const leaderBoard = get(leaderRes, 'data.getLeaderBoard', []);
+        const gameRes = await client.query({query: getGameResults});
+        const gameHistory = get(gameRes, 'data.getGameResults', []);
+
+        console.log('gameHistory', gameHistory);
+
+        this.setState({
+            gameHistory,
+            leaderBoard
+        });
     }
 
     toggleFormType = e => {
@@ -60,7 +85,14 @@ class App extends Component{
     };
 
     render() {
-        const {formType, gameType, loggedIn, user = {}} = this.state;
+        const {
+            formType,
+            gameHistory = [],
+            gameType,
+            leaderBoard = [],
+            loggedIn,
+            user = {}
+        } = this.state;
         const {email} = user;
         const formTypeLink = formType == 'signup' ? 'I already have an account' : 'I don\'t have a login';
         let step;
@@ -77,7 +109,8 @@ class App extends Component{
             <Container className="text-center">
                 <StyledRoot className="mt-5">
                     <Row>
-                        <Col>
+                        <Col md={{span: 10, offset: 1}}>
+                            <img src={icon} width={125} className="mb-4" />
                             <h2>Tic Tac Toe</h2>
                             {step === 'login' && (
                                 <>
@@ -107,11 +140,11 @@ class App extends Component{
                                         return (
                                             <Button
                                                 key={type}
-                                                className="mr-3"
+                                                className="mr-3 my-2"
                                                 data-gametype={type}
                                                 size="lg"
                                                 onClick={this.handleSelectGameType}>
-                                                Play {capitalize(type)}
+                                                {capitalize(type)}
                                             </Button>
                                         );
                                     })}
@@ -121,6 +154,7 @@ class App extends Component{
                                 <>
                                     <TicTacToe
                                         gameType={gameType}
+                                        startOver={this.handleStartOver}
                                         user={user} />
                                     <Button
                                         className="mt-4"
@@ -131,7 +165,7 @@ class App extends Component{
                                 </>
                             )}
                             {loggedIn && (
-                                <div className="my-5">
+                                <div className="my-4">
                                     <p>
                                         Logged in as {email}
                                         &nbsp;(<a href="#" onClick={this.handleLogout}>Logout</a>)
@@ -140,10 +174,82 @@ class App extends Component{
                             )}
                         </Col>
                     </Row>
+                    <Row>
+                        <Col md={{span: 10, offset: 1}}>
+                            <Accordion>
+                                <Card>
+                                    <Card.Header>
+                                        <Accordion.Toggle as={Button} variant="link" eventKey="0">
+                                            Leader Board
+                                        </Accordion.Toggle>
+                                    </Card.Header>
+                                    <Accordion.Collapse eventKey="0">
+                                        <Card.Body className="p-0">
+                                            <Table striped bordered size="sm" className="mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Player</th>
+                                                        <th>Wins</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {leaderBoard.map((leader, i) => {
+                                                        const {email, counted} = leader;
+
+                                                        return (
+                                                            <tr key={email}>
+                                                                <td>{i+1}</td>
+                                                                <td>{email}</td>
+                                                                <td>{counted}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </Table>
+                                        </Card.Body>
+                                    </Accordion.Collapse>
+                                </Card>
+                                <Card>
+                                    <Card.Header>
+                                        <Accordion.Toggle as={Button} variant="link" eventKey="1">
+                                            Game History
+                                        </Accordion.Toggle>
+                                    </Card.Header>
+                                    <Accordion.Collapse eventKey="1">
+                                        <Card.Body className="p-0">
+                                            <Table striped bordered size="sm" className="mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Winner</th>
+                                                        <th>Loser</th>
+                                                        <th>Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {gameHistory.map((game, i) => {
+                                                        const {loser, timestamp, winner} = game;
+
+                                                        return (
+                                                            <tr key={`${winner}-${i}`}>
+                                                                <td>{winner}</td>
+                                                                <td>{loser}</td>
+                                                                <td>{timestamp}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </Table>
+                                        </Card.Body>
+                                    </Accordion.Collapse>
+                                </Card>
+                            </Accordion>
+                        </Col>
+                    </Row>
                 </StyledRoot>
             </Container>
         );
     }
 }
 
-export default App;
+export default withApollo(App);

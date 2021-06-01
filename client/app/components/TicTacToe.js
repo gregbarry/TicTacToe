@@ -8,7 +8,7 @@ import Loader from 'react-loader-spinner';
 import Carousel from 'react-bootstrap/Carousel';
 
 import {DIMENSIONS, DRAW, SQUARE_DIMENSIONS} from '-/constants';
-import {getStrikethroughStyles} from '-/utils';
+import {getStrikethroughStyles, sleep} from '-/utils';
 
 const Strikethrough = styled.div`
     position: absolute;
@@ -101,23 +101,22 @@ export default class TicTacToe extends Component {
         const {active, piece} = player;
         const otherPlayer = players.find(player => player.name !== email) || {};
         const {name, piece: otherPlayerPiece} = otherPlayer;
-        let message;
+        let message = active ? 'Your Turn' : `Waiting on ${name}`;
 
-        switch(winner) {
-            case DRAW: {
-                message = 'It was a draw';
-                break;
-            }
-            case piece: {
-                message = 'You Won!';
-                break;
-            }
-            case otherPlayerPiece: {
-                message = `${name} won :(`;
-                break;
-            }
-            default: {
-                message = active ? 'Your Turn' : `Waiting on ${name}`;
+        if (winner) {
+            switch(winner) {
+                case DRAW: {
+                    message = 'It was a draw';
+                    break;
+                }
+                case piece: {
+                    message = 'You Won!';
+                    break;
+                }
+                case otherPlayerPiece: {
+                    message = `${name} won :(`;
+                    break;
+                }
             }
         }
 
@@ -125,11 +124,21 @@ export default class TicTacToe extends Component {
     };
 
     async componentDidMount() {
-        const {gameType, user} = this.props;
-        const {email} = user;
+        const {gameType, startOver, user} = this.props;
+        const {email, id} = user;
 
         this.socket = socketClient();
-        this.socket.emit('startGame', {gameType, email});
+        this.socket.emit('startGame', {
+            gameType,
+            email,
+            id
+        });
+
+        this.socket.on('gameOver', async() => {
+            await sleep(4000);
+            startOver();
+        });
+
         this.socket.on('joiningRoom', roomObj => {
             const {grid, players, roomId} = roomObj;
             const message = this.getMessage(roomObj);
