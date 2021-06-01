@@ -1,10 +1,8 @@
 # TicTacToe
 
 ## Overview
-This project was created to meet the goal of creating a tic-tac-toe game that could be played against a human or 
-a computer.  The challenge also required a user account to play.  All of that data persists in a PostGres database.
-All user authorization is communicated between the `server` and `client` by way of Apollo/GraphQL.  Moves are communicated
-between the platforms by way of Socket.io.
+This project was created in order to meet the goal of prodcuing a tic-tac-toe game that could be played against a human or 
+a computer.
 
 ## Getting Started
 This repo is broken into two distinct projects, `server` and `client`.  To get started using this project, download 
