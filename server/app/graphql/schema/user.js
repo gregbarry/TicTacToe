@@ -28,6 +28,8 @@ export const addUserGameResults = async(players, gameResults) => {
         const {id: losingId} = players.find(p => p.piece !== winningPiece);
         const insert = `INSERT INTO games (winner, loser, timestamp) VALUES (${winningId}, ${losingId}, current_timestamp);`;
 
+        console.log('insert', insert);
+        
         await db.query(insert);
     } catch(ex) {
         logger.error(ex);
