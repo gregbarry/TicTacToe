@@ -46,8 +46,6 @@ class App extends Component{
         const gameRes = await client.query({query: getGameResults});
         const gameHistory = get(gameRes, 'data.getGameResults', []);
 
-        console.log('gameHistory', gameHistory);
-
         this.setState({
             gameHistory,
             leaderBoard
@@ -174,7 +172,7 @@ class App extends Component{
                             )}
                         </Col>
                     </Row>
-                    <Row>
+                    <Row className="mt-4">
                         <Col md={{span: 10, offset: 1}}>
                             <Accordion>
                                 <Card>
