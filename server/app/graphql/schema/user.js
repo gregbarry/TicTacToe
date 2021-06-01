@@ -21,6 +21,46 @@ const db = new Pool({
     port: PG_PORT
 });
 
+export const addUserGameResults = async(players, gameResults) => {
+    try {
+        const {winner: winningPiece} = gameResults;
+        const {id: winningId} = players.find(p => p.piece === winningPiece);
+        const {id: losingId} = players.find(p => p.piece !== winningPiece);
+        const insert = `INSERT INTO games (winner, loser, timestamp) VALUES (${winningId}, ${losingId}, current_timestamp);`;
+
+        await db.query(insert);
+    } catch(ex) {
+        logger.error(ex);
+    }
+};
+
+const getGameResults = async() => {
+    try {
+        const query = `SELECT TO_CHAR(timestamp, 'MM/DD/YYYY') as timestamp, a.email as winner, b.email as loser from games g
+            INNER JOIN users a on g.winner = a.id
+            INNER JOIN users b on g.loser = b.id`;
+
+        const {rows = []} = await db.query(query);
+        return rows;
+    } catch(ex) {
+        logger.error(ex);
+    }
+};
+
+const getLeaderBoard = async() => {
+    try {
+        const query = `SELECT email, COUNT(email) AS counted FROM games g, users u
+            WHERE g.winner = u.id
+            GROUP BY email
+            ORDER BY counted DESC`;
+
+        const {rows = []} = await db.query(query);
+        return rows;
+    } catch(ex) {
+        logger.error(ex);
+    }
+};
+
 const userLogin = async(root, params) => {
     const {user = {}} = params;
     const {email, password: textPassword} = user;
@@ -62,7 +102,8 @@ const userLogin = async(root, params) => {
     return {
         __typename: 'UserLogin',
         user: {
-            email: userEmail
+            email: userEmail,
+            id
         },
         token
     };
@@ -101,13 +142,25 @@ const userSignup = async(root, params) => {
     return {
         __typename: 'UserLogin',
         user: {
-            email
+            email,
+            id
         },
         token
     };
 };
 
 export const typeDefs = gql`
+    type GameResult {
+        loser: String
+        winner: String
+        timestamp: String
+    }
+
+    type LeaderRow {
+        email: String
+        counted: Int
+    }
+
     type Error {
         code: Int
         message: String
@@ -115,6 +168,7 @@ export const typeDefs = gql`
 
     type User {
         email: String
+        id: Int
         password: String
     }
 
@@ -130,12 +184,14 @@ export const typeDefs = gql`
 
     union UserLoginResult = UserLogin | Error
 
-    extend type Query {
-        userLogin(user: UserInput): UserLoginResult
-    }
-
     extend type Mutation {
         userSignup(user: UserInput): UserLoginResult
+    }
+
+    extend type Query {
+        getGameResults: [GameResult]
+        getLeaderBoard: [LeaderRow]
+        userLogin(user: UserInput): UserLoginResult
     }
 `;
 
@@ -144,6 +200,8 @@ export const resolvers = {
         userSignup
     },
     Query: {
+        getGameResults,
+        getLeaderBoard,
         userLogin
     }
 };

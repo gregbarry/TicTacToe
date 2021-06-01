@@ -3,6 +3,7 @@ import {gql} from '@apollo/client';
 const userFragment = gql`
     fragment User on User {
         email
+        id
     }
 `;
 
@@ -42,4 +43,23 @@ export const userSignup = gql`
         }
     }
     ${userFragment}
+`;
+
+export const getGameResults = gql`
+    query getGameResults {
+        getGameResults {
+            winner
+            loser
+            timestamp
+        }
+    }
+`;
+
+export const getLeaderBoard = gql`
+    query getLeaderBoard {
+        getLeaderBoard {
+            counted
+            email
+        }
+    }
 `;

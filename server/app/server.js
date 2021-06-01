@@ -15,9 +15,10 @@ import url from 'url';
 import {config} from './config';
 import graphqlSchema from './graphql/schema/';
 import {checkForWinner, getEmptySquares, sleep, updatePlayers} from './utils';
+import {addUserGameResults} from './graphql/schema/user';
 
 logger.addTarget('console').withFormatter(palin);
-logger.info('NestGenesis init');
+logger.info('Tic Tac Toe init');
 
 const PORT = process.env.PORT || 4000;
 const env = process.env.NODE_ENV || 'development';
@@ -60,7 +61,7 @@ const start = async() => {
     };
 
     const createRoom = (gameInfo = {}) => {
-        const {email, gameType} = gameInfo;
+        const {email, gameType, id} = gameInfo;
         let newRoom = nanoid();
 
         while (rooms.has(newRoom)){
@@ -69,9 +70,10 @@ const start = async() => {
 
         const players = [{
             active: true,
-            type: 'human',
+            id,
             name: email,
-            piece: 'X'
+            piece: 'X',
+            type: 'human'
         }];
 
         if (gameType === 'computer') {
@@ -99,9 +101,9 @@ const start = async() => {
         const computer = players.find(player => player.type === 'computer');
         const {piece} = computer;
         const emptySquares = getEmptySquares(grid);
-        // TODO: Implement minimax 50% of the time to make computer picks smarter
         const computerPick = sample(emptySquares);
         const gridClone = [...grid];
+
         gridClone[computerPick] = piece;
 
         const gameResults = checkForWinner(gridClone);
@@ -119,18 +121,19 @@ const start = async() => {
         });
     };
 
-    const handleMove = (moveInfo = {}) => {
+    const handleMove = async(moveInfo = {}) => {
         const {roomId, player, square} = moveInfo;
         const {piece} = player;
         const room = rooms.get(roomId);
-        const {grid, players = []} = room;
+        const {gameType, grid, players = []} = room;
         const gridClone = [...grid];
         gridClone[square] = piece;
 
         const gameResults = checkForWinner(gridClone);
 
-        if (gameResults) {
-            // TODO: Update database with win information
+        if (gameResults && gameType === 'multiplayer') {
+            // Don't block by awaiting
+            addUserGameResults(players, gameResults);
         }
 
         const updatedPlayers = updatePlayers(players);
@@ -149,7 +152,7 @@ const start = async() => {
         logger.info('New client connected');
 
         socket.on('startGame', gameInfo => {
-            const {email, gameType} = gameInfo;
+            const {email, id, gameType} = gameInfo;
             const {size} = rooms;
             let needsTable = true;
 
@@ -162,9 +165,10 @@ const start = async() => {
                             ...theRest,
                             players: [...players, {
                                 active: false,
-                                type: 'human',
+                                id,
                                 name: email,
-                                piece: 'O'
+                                piece: 'O',
+                                type: 'human'
                             }]
                         });
 
@@ -198,11 +202,15 @@ const start = async() => {
                 const updatedRoom = rooms.get(roomId);
                 socket.emit('moveHandled', updatedRoom);
             }
+
+            if (gameType === 'multiplayer' && gameOver) {
+                io.to(roomId).emit('gameOver');
+                socket.disconnect();
+            }
         });
 
         socket.on('disconnect', e => {
             logger.info('Client disconnected');
-            // TODO: emit event letting other player know opponent disconneted
         });
     });
 

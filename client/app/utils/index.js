@@ -55,3 +55,9 @@ export const getStrikethroughStyles = winningIndex => {
             return null;
     }
 };
+
+export const sleep = delay => {
+    return new Promise(res => {
+        return setTimeout(res, delay);
+    });
+};
